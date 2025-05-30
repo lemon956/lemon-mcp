@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "desktop-analyzer": {
+      "command": "python",
+      "args": ["/home/hellotalk/selfPorject/mcp/demo/server.py"],
+      "env": {
+        "PYTHONPATH": "/home/hellotalk/selfPorject/mcp/demo"
+      }
+    }
+  }
+} 
