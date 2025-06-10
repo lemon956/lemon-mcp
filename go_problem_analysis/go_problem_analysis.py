@@ -1,7 +1,7 @@
 import mcp.types as types
 from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.resources.base import Resource
-from mcp.server.stdio import stdio_server
+# from mcp.server.fastmcp.resources.base import Resource
+# from mcp.server.stdio import stdio_server
 from pydantic import AnyUrl
 import json
 import asyncio
@@ -20,7 +20,13 @@ import subprocess
 # read_resources 获取服务pod ip
 # read_resources 获取pod pprof 信息
 # read_resources 获取服务metrics
-mcp = FastMCP("svc_problem_analysis")
+mcp = FastMCP(
+    name="go-problem-analysis",
+    version="1.0.0",
+    description="Go应用性能问题分析工具"
+)
+
+
 kube_config_path = "~/.kube/config"
 
 
@@ -28,6 +34,11 @@ def setup_ssl_from_kubeconfig() -> client.CoreV1Api:
     """从kubeconfig提取证书并设置SSL"""
     try:
         kubeconfig_path = os.path.expanduser(kube_config_path)
+
+        # 添加路径检查
+        if not os.path.exists(kubeconfig_path):
+            print(f"警告: kubeconfig文件不存在: {kubeconfig_path}")
+            return None
 
         with open(kubeconfig_path, 'r') as f:
             kubeconfig = yaml.safe_load(f)
@@ -95,10 +106,10 @@ def setup_ssl_from_kubeconfig() -> client.CoreV1Api:
 
     except Exception as e:
         print(f"从kubeconfig设置SSL失败: {e}")
+        # 添加更详细的错误信息
+        import traceback
+        print(f"详细错误: {traceback.format_exc()}")
         return None
-
-
-kube_cli = setup_ssl_from_kubeconfig()
 
 
 def list_resources() -> list[types.Resource]:
@@ -271,8 +282,31 @@ async def get_svc_metrics(namespace: str, service_name: str, metrics_port: int =
 #     async with stdio_server(mcp) as (read_stream, write_stream):
 #         await mcp.run(read_stream, write_stream)
 
+
+kube_cli = setup_ssl_from_kubeconfig()
+if kube_cli is None:
+    print("警告: Kubernetes客户端初始化失败，某些功能可能不可用")
+
+
 if __name__ == "__main__":
-    for resource in list_resources():
-        mcp.add_resource(resource)
-    print(asyncio.run(mcp.list_resources()))
-    mcp.run(transport="stdio")
+    try:
+        # 注册资源
+        resources = list_resources()
+        for resource in resources:
+            mcp.add_resource(resource)
+
+        print(f"已注册 {len(resources)} 个资源")
+
+        # 测试资源列表
+        resource_list = asyncio.run(mcp.list_resources())
+        print(f"资源列表验证: {len(resource_list)} 个资源")
+
+        # 启动服务器
+        print("启动 MCP 服务器...")
+        mcp.run(transport="stdio")
+
+    except Exception as e:
+        print(f"启动服务器时发生错误: {e}")
+        import traceback
+        traceback.print_exc()
+        exit(1)

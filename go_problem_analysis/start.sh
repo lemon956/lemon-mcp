@@ -50,4 +50,4 @@ python3 -m pip install -r requirements.txt
 
 # 启动服务器
 echo "🌟 启动 MCP Server..."
-python3 main.py 
+python3 go_problem_analysis.py 
